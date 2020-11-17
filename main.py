@@ -123,12 +123,10 @@ def extract_data(soup) -> dict:
     data = {}
     prefix = dict(author="Author", year="Year", description="Description")
     for key, value in prefix.items():
-        tag = "p"
-        if value == "Description":
-            tag = "div"
+        tag = "div" if value == "Description" else "p"
         raw_data = soup.select_one(f"{tag}:contains({value})")
         data[key] = raw_data.get_text().split(":", 1)[-1].strip() if raw_data else ""
-    data.update(year=data["year"].split(":")[-1].strip())
+    data.update(year=data["year"][-4:])
     return data
 
 
