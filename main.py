@@ -1,7 +1,6 @@
 import time
 from base64 import b64encode
 from dataclasses import asdict
-from re import sub
 from typing import List
 from urllib.parse import urlencode
 
@@ -128,6 +127,19 @@ async def search(query: str = "", search_type: str = "title", page: int = 0):
     return response
 
 
+def extract_data(soup) -> dict:
+    data = {}
+    prefix = dict(author="Author", year="Year", description="Description")
+    for key, value in prefix.items():
+        tag = "p"
+        if value == "Description":
+            tag = "div"
+        raw_data = soup.select_one(f"{tag}:contains({value})")
+        data[key] = raw_data.get_text().split(":", 1)[-1].strip() if raw_data else ""
+    data.update(year=data["year"].split(":")[-1].strip())
+    return data
+
+
 app = FastAPI()
 
 app.add_middleware(
@@ -171,19 +183,18 @@ async def book_search(search_type: str, query: str, page: int):
 @cache(expire=99)
 async def book_info(code: str):
     start = time.time()
-    regex: str = "<[^<]+?>"
     base_url = "http://library.lol"
-    link = base_url + "/main/" + code
+    link = f"{base_url}/main/{code}"
     client = httpx.AsyncClient()
     response = await client.get(link)
-    markup = response.text
+    markup: str = response.text
     soup = bs(markup, "lxml")
     try:
-        image = base_url + soup.find("img")["src"]
+        image = f"{base_url}{soup.find('img')['src']}"
         response = await client.get(image)
-        encoded_image_data = "data:image/png;base64," + b64encode(
-            response.content
-        ).decode("utf-8")
+        encoded_image_data: str = (
+            f"data:image/png;base64,{b64encode(response.content).decode('utf-8')}"
+        )
         await client.aclose()
     except:
         encoded_image_data = "NO_IMAGE"
@@ -196,45 +207,14 @@ async def book_info(code: str):
     subtitle = ""
     if len(heading) > 1:
         subtitle = heading[1].strip()
-    try:
-        author_prefix = "Author"
-        author = str(soup.select_one("p:contains({})".format(author_prefix)))[14:]
-        author = sub(regex, "", author)
-    except:
-        author = ""
-    try:
-        year = sub(
-            regex,
-            "",
-            str(soup.select_one("p:contains(Publisher)"))
-            .split(",")[1]
-            .removeprefix(" Year: "),
-        )
-    except IndexError:
-        year = ""
-    try:
-        description_prefix = "Description"
-        description = (
-            str(soup.select_one("div:contains({})".format(description_prefix)))
-            .removeprefix("<div>" + description_prefix + ":<br/>")
-            .removesuffix("</div>")
-        )
-        description = description.replace("<br />", "")
-        description = sub(regex, "", description)
-        description = " ".join(description.split())
-        description = description.replace("'", "'").replace('"', "")
-        description = description.replace("\n", "")
-    except:
-        description = ""
+    data = extract_data(soup)
     end = time.time()
     time_elapsed = end - start
     result = dict(
         time_elapsed=time_elapsed,
         title=title,
         subtitle=subtitle,
-        description=description,
-        year=year,
-        author=author,
+        **data,
         image=encoded_image_data,
         direct_url=direct_url,
     )
