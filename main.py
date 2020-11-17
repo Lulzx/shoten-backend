@@ -1,4 +1,3 @@
-import time
 from base64 import b64encode
 from dataclasses import asdict
 from typing import List
@@ -42,13 +41,11 @@ class Result:
 
 @dataclass
 class SearchResult:
-    time_elapsed: float
     results: list[Result]
     count: int
 
 
 class BookInfo(BaseModel):
-    time_elapsed: float
     title: str
     subtitle: str
     description: str
@@ -59,7 +56,6 @@ class BookInfo(BaseModel):
 
 
 class AudiobookInfo(BaseModel):
-    time_elapsed: float
     title: str
     description: str
     authors: str
@@ -83,7 +79,6 @@ def sanitize(row):
 
 
 async def search(query: str = "", search_type: str = "title", page: int = 0):
-    start = time.time()
     params = LibGen(req=query, column=search_type, page=page)
     query_string = urlencode(asdict(params), doseq=True)
     search_url = f"http://gen.lib.rus.ec/search.php?{query_string}"
@@ -121,10 +116,7 @@ async def search(query: str = "", search_type: str = "title", page: int = 0):
     except:
         count = 0
         result = []
-    end = time.time()
-    time_elapsed = end - start
-    response = dict(time_elapsed=time_elapsed, results=result, count=count)
-    return response
+    return dict(results=result, count=count)
 
 
 def extract_data(soup) -> dict:
@@ -182,7 +174,6 @@ async def book_search(search_type: str, query: str, page: int):
 @app.get("/book/{code}", response_model=BookInfo)
 @cache(expire=99)
 async def book_info(code: str):
-    start = time.time()
     base_url = "http://library.lol"
     link = f"{base_url}/main/{code}"
     client = httpx.AsyncClient()
@@ -204,14 +195,9 @@ async def book_info(code: str):
         direct_url = soup.select_one("a[href*=main]")["href"]
     heading = soup.find("h1").text.split(":")
     title = heading[0]
-    subtitle = ""
-    if len(heading) > 1:
-        subtitle = heading[1].strip()
+    subtitle = heading[1].strip() if len(heading) > 1 else ""
     data = extract_data(soup)
-    end = time.time()
-    time_elapsed = end - start
     result = dict(
-        time_elapsed=time_elapsed,
         title=title,
         subtitle=subtitle,
         **data,
@@ -224,13 +210,9 @@ async def book_info(code: str):
 @app.get("/vox/{query}", response_model=AudiobookInfo)
 @cache(expire=99)
 async def audiobook_search(query: str):
-    start = time.time()
     book = Librivox.search_audiobooks(title=query)[0]
     authors = str(book.authors[0]).split(",")[0]
-    end = time.time()
-    time_elapsed = end - start
     result = dict(
-        time_elapsed=time_elapsed,
         title=book.title,
         description=book.description,
         authors=authors,
