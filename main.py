@@ -180,17 +180,22 @@ async def book_info(code: str):
     soup = bs(markup, "lxml")
     try:
         image = f"{base_url}{soup.find('img')['src']}"
-        response = await client.get(image)
-        encoded_image_data: str = (
-            f"data:image/png;base64,{b64encode(response.content).decode('utf-8')}"
-        )
-        await client.aclose()
+        if not image:
+            encoded_image_data = "NO_IMAGE"
+        else:
+            response = await client.get(image)
+            encoded_image_data: str = (
+                f"data:image/png;base64,{b64encode(response.content).decode('utf-8')}"
+            )
+            await client.aclose()
     except:
         encoded_image_data = "NO_IMAGE"
     try:
         direct_url = soup.select_one("a[href*=cloudflare]")["href"]
     except TypeError:
         direct_url = soup.select_one("a[href*=main]")["href"]
+    except:
+        direct_url = "/404"
     heading = soup.find("h1").text.split(":")
     title = heading[0]
     subtitle = heading[1].strip() if len(heading) > 1 else ""
