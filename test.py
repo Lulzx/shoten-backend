@@ -1,3 +1,4 @@
-x = ['0.07899999618530273', [{'id': '540896', 'author': 'Meish Goldish', 'title': "Red Wolves: And Then There Were (Almost) None (America's Animal Comebacks)", 'publisher': '', 'year': '2009', 'size': '3 Mb', 'extension': 'pdf', 'download': 'http://library.lol/main/858E65FEDBF00662148E339BF59F203B'}, {'id': '745520', 'author': 'Agatha Christie', 'title': 'And Then There Were None', 'publisher': 'HarperCollins', 'year': '2009', 'size': '2 Mb', 'extension': 'pdf', 'download': 'http://library.lol/main/5BD7D6BF09CBEB7471B080B9D2FDE931'}, {
-    'id': '751758', 'author': 'Agatha Christie', 'title': 'And Then There Were None', 'publisher': 'HarperCollins', 'year': '2011', 'size': '0.39 Mb', 'extension': 'epub', 'download': 'http://library.lol/main/74E18BFFB77FD261E623512ED17621FC'}, {'id': '827687', 'author': 'Agatha Christie', 'title': 'And Then There Were None', 'publisher': 'HarperCollins Publishers', 'year': '2003', 'size': '2 Mb', 'extension': 'pdf', 'download': 'http://library.lol/main/07122308DC8F4EB47314784B7CEC6EC7'}], '4']
-print(x[2])
+from urllib.parse import parse_qs, urlparse
+url = "https://cloudflare-ipfs.com/ipfs/bafk2bzaced2r3q7fk3vum7ufhjig7yntjhy7wyg7tiemxjs3fzpvzx5llc5ry?filename=Sachiaki%20Takamiya%20-%20Ikigai%20Diet_%20The%20Secret%20of%20Japanese%20Diet%20to%20Health%20and%20Longevity-Zen%20Quest%20%282018%29.epub"
+print({k: v[0] if v and len(v) == 1 else v for k,
+       v in parse_qs(urlparse(url).query).items()}["wow"])
