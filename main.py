@@ -293,11 +293,6 @@ def replace_links(content):
             src["href"] = src["href"][src["href"].find("#"):]
         except KeyError:
             pass
-    return soup
-
-
-def lazy_load(content):
-    soup = bs(content, "lxml")
     for img in soup.findAll('img'):
         img.attrs['loading'] = 'lazy'
     return soup
@@ -314,7 +309,6 @@ def processor(filepath):
     with open(path, 'r') as markup:
         data = markup.read()
         data = replace_links(data)
-        data = lazy_load(data)
     return str(data)
 
 
