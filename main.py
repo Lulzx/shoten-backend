@@ -113,8 +113,8 @@ async def search(query: str = "", search_type: str = "title", page: int = 0):
             [
                 td.a["href"]
                 if td.find("a")
-                   and td.find("a").has_attr("title")
-                   and td.find("a")["title"] != ""
+                and td.find("a").has_attr("title")
+                and td.find("a")["title"] != ""
                 else "".join(td.stripped_strings)
                 for td in row.find_all("td")
             ]
@@ -296,6 +296,13 @@ def replace_links(content):
     return soup
 
 
+def lazy_load(content):
+    soup = bs(content, "lxml")
+    for img in soup.findAll('img'):
+        img.attrs['loading'] = 'lazy'
+    return soup
+
+
 def processor(filepath):
     if filepath[0] != "." and filepath[0] != "/":
         filepath = "./" + filepath
@@ -306,7 +313,9 @@ def processor(filepath):
     path = e.get_index_loc()
     with open(path, 'r') as markup:
         data = markup.read()
-    return str(replace_links(data))
+        data = replace_links(data)
+        data = lazy_load(data)
+    return str(data)
 
 
 app = FastAPI()
