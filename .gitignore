@@ -133,4 +133,6 @@ static/*
 *.epub
 .idea
 
-!static/.gitkeep 
+!static/.gitkeep
+!static/pusha.min.css
+!static/pusha.min.js
