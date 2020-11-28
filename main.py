@@ -388,18 +388,19 @@ async def book_info(code: str):
     response = await client.get(link)
     markup: str = response.text
     soup = bs(markup, "lxml")
-    try:
-        image = f"{base_url}{soup.find('img')['src']}"
-        if not image:
-            encoded_image_data = "NO_IMAGE"
-        else:
+    image = f"{base_url}{soup.find('img')['src']}"
+    if not image:
+        filepath = "NO_IMAGE"
+    else:
+        try:
             response = await client.get(image)
-            encoded_image_data: str = (
-                f"data:image/png;base64,{b64encode(response.content).decode('utf-8')}"
-            )
+            filepath = "./static/" + image.split('/')[-1]
+            with open(filepath, 'wb') as f:
+                f.write(response.content)
+            filepath = "https://lulzx.herokuapp.com/" + filepath[2:]
             await client.aclose()
-    except:
-        encoded_image_data = "NO_IMAGE"
+        except:
+            filepath = "NO_IMAGE"
     try:
         direct_url = soup.select_one("a[href*=cloudflare]")["href"]
     except TypeError:
@@ -414,7 +415,7 @@ async def book_info(code: str):
         title=title,
         subtitle=subtitle,
         **data,
-        image=encoded_image_data,
+        image=filepath,
         direct_url=direct_url,
     )
     return result
