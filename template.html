@@ -7,16 +7,21 @@
     ${css}$
     <style type="text/css">
       html body {
-        overflow-x: hidden;
+        max-width: 100% !important;
+        overflow-x: hidden !important;
         height: 100% !important;
       }
       .main {
         margin-left: 0;
         margin-right: 0;
+        word-wrap: break-word;
       }
       header {
         position: fixed;
         top: 0;
+      }
+      img {
+        max-width: -webkit-fill-available;
       }
       .pusha-active,
       .pusha-active body {
