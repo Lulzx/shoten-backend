@@ -3,11 +3,13 @@
 import os
 import re
 import zipfile
+from hashlib import md5
 from base64 import b64encode
 from dataclasses import asdict
 from html.parser import HTMLParser
 from os.path import dirname, basename, join, splitext, abspath
 from pathlib import Path
+from subprocess import Popen
 from typing import List
 from urllib.parse import urlencode, parse_qs, urlparse
 
@@ -21,6 +23,7 @@ from fastapi.staticfiles import StaticFiles
 from fastapi_cache import FastAPICache
 from fastapi_cache.backends.inmemory import InMemoryBackend
 from fastapi_cache.decorator import cache
+from brotli_asgi import BrotliMiddleware
 from lxml import etree
 from pydantic import AnyUrl, BaseModel
 from pydantic.dataclasses import dataclass
@@ -298,13 +301,19 @@ def replace_links(content):
     return soup
 
 
-def processor(filepath):
-    if filepath[0] != "." and filepath[0] != "/":
-        filepath = "./" + filepath
-    filepath = abspath(filepath)
+async def optimize_images(dir):
+    Popen(["python", "-m", "optimize_images", f"{dir}"])
+
+
+async def processor(filename):
     output_dir = "./static/"
-    e = Worker(filepath, output_dir)
+    dir = f"{output_dir}{filename}/"
+    if filename[0] != "." and filename[0] != "/":
+        filename = "./" + filename
+    filename = abspath(filename)
+    e = Worker(filename, output_dir)
     e.gen()
+    await optimize_images(dir)
     path = e.get_index_loc()
     with open(path, 'r') as markup:
         data = markup.read()
@@ -320,6 +329,16 @@ app.add_middleware(
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
+)
+
+app.add_middleware(
+    BrotliMiddleware,
+    quality=4,
+    mode="text",
+    lgwin=22,
+    lgblock=0,
+    minimum_size=400,
+    gzip_fallback=True
 )
 
 app.mount("/static", StaticFiles(directory="static"), name="static")
@@ -410,7 +429,7 @@ async def audiobook_search(query: str):
 
 
 @app.get("/epub", response_class=HTMLResponse)
-@cache(expire=99)
+@cache(expire=1)
 async def epub(url: str):
     if url.endswith(".epub"):
         async with httpx.AsyncClient() as client:
@@ -419,9 +438,10 @@ async def epub(url: str):
                 filename = parse_url_args(url)["filename"]
             except:
                 filename = url.split("/")[-1]
+            filename = md5(filename.encode('utf-8')).hexdigest()
             with open(filename, 'wb') as f:
                 f.write(response.content)
-        return processor(filepath=filename)
+        return await processor(filename=filename)
     else:
         return "provide url to epub file."
 

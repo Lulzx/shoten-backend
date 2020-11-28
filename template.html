@@ -10,10 +10,6 @@
       rel="stylesheet"
     />
     <link rel="stylesheet" href="./static/pusha.min.css" />
-    <link
-      rel="stylesheet"
-      href="https://cdnjs.cloudflare.com/ajax/libs/baseguide/4.0.0/css/baseguide.min.css"
-    />
     ${css}$
     <style type="text/css">
       html body {
@@ -23,27 +19,6 @@
       .main {
         margin-left: 0;
         margin-right: 0;
-        height: 100%;
-        font-size: medium !important;
-      }
-      .nav-sidebar {
-        padding: 30px;
-        background-color: #f5f5f5;
-        cursor: pointer;
-      }
-      .nav-sidebar > li > a {
-        color: #005cad;
-      }
-      .menuItem:hover > a {
-        background-color: #eee;
-      }
-      .nav .active > a,
-      .nav-sidebar .active:hover > a {
-        background-color: #428bca;
-        color: #fff;
-      }
-      .index {
-        padding: 10px;
       }
       header {
         position: fixed;
@@ -51,7 +26,7 @@
     </style>
   </head>
   <body>
-    <div class="pusha-panel pusha-panel--left nav-sidebar" aria-hidden="true">
+    <div class="pusha-panel pusha-panel--left" aria-hidden="true">
       <div class="pusha-panel__content">
         <div class="pusha-panel__inner"><nav>${menu}$</nav></div>
       </div>

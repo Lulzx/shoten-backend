@@ -9,3 +9,6 @@ pydantic
 httpx
 fastapi-cache2[memcache]
 dataclasses
+brotli-asgi
+pillow
+optimize-images
