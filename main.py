@@ -320,7 +320,7 @@ async def processor(filename, title):
     e.gen()
     await optimize_images(dir)
     path = e.get_index_loc()
-    with open(path, 'r') as markup:
+    with open(path, 'r', encoding="utf-8") as markup:
         data = markup.read()
         data = replace_links(data, original)
     return str(data)
