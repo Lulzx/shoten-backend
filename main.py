@@ -435,7 +435,7 @@ async def audiobook_search(query: str):
 
 
 @app.get("/epub", response_class=HTMLResponse)
-@cache(expire=1)
+@cache(expire=99)
 async def epub(url: str):
     if url.endswith(".epub"):
         async with httpx.AsyncClient() as client:
