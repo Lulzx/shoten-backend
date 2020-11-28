@@ -302,7 +302,8 @@ def replace_links(content, filename):
         if img["src"].startswith(".."):
             img["src"] = img["src"].replace(
                 "..", f"static\{filename}")
-        img["src"] = img["src"].replace("OEBPS/toc.ncx/images", "OEBPS/images")
+        if "toc.ncx" in img["src"]:
+            img["src"] = img["src"].replace("toc.ncx/images", "/images")
     return soup
 
 
