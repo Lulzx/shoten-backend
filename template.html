@@ -4,11 +4,10 @@
     <meta charset="UTF-8" />
     <title>${title}$</title>
     <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <link rel="preconnect" href="https://fonts.gstatic.com" />
-    <link rel="stylesheet" href="./static/pusha.min.css" />
     ${css}$
     <style type="text/css">
       html body {
+        overflow-x: hidden;
         height: 100% !important;
       }
       .main {
@@ -17,6 +16,106 @@
       }
       header {
         position: fixed;
+      }
+      .pusha-active,
+      .pusha-active body {
+        overflow: hidden;
+      }
+      .pusha-push {
+        -webkit-transition: -webkit-transform 0.3s ease;
+        transition: -webkit-transform 0.3s ease;
+        transition: transform 0.3s ease;
+        transition: transform 0.3s ease, -webkit-transform 0.3s ease;
+      }
+      .pusha-panel {
+        opacity: 0;
+        visibility: hidden;
+        position: fixed;
+        will-change: transform;
+      }
+      .pusha-panel--left {
+        max-width: 100%;
+        max-height: 100vh;
+        width: 260px;
+        height: 100%;
+        background-color: #fff;
+        top: 0;
+        left: 0;
+        -webkit-transform: translateX(-100%);
+        transform: translateX(-100%);
+        z-index: 200;
+        -webkit-transition: visibility 0s linear 0.3s, opacity 50ms linear 0.3s,
+          -webkit-transform 0.3s ease;
+        transition: visibility 0s linear 0.3s, opacity 50ms linear 0.3s,
+          -webkit-transform 0.3s ease;
+        transition: visibility 0s linear 0.3s, opacity 50ms linear 0.3s,
+          transform 0.3s ease;
+        transition: visibility 0s linear 0.3s, opacity 50ms linear 0.3s,
+          transform 0.3s ease, -webkit-transform 0.3s ease;
+      }
+      .pusha-panel--left.pusha-panel--active ~ .pusha-blocker,
+      .pusha-panel--left.pusha-panel--active ~ .pusha-push {
+        -webkit-transform: translateX(260px);
+        transform: translateX(260px);
+      }
+      .pusha-panel--left.pusha-panel--active {
+        -webkit-transition: opacity 50ms, -webkit-transform 0.3s ease;
+        transition: opacity 50ms, -webkit-transform 0.3s ease;
+        transition: opacity 50ms, transform 0.3s ease;
+        transition: opacity 50ms, transform 0.3s ease,
+          -webkit-transform 0.3s ease;
+      }
+      .pusha-panel--active {
+        opacity: 1;
+        visibility: visible;
+        -webkit-transform: none !important;
+        transform: none !important;
+      }
+      .pusha-panel__content {
+        position: absolute;
+        top: 0;
+        left: 0;
+        right: 0;
+        height: 100%;
+        overscroll-behavior-y: contain;
+        -webkit-overflow-scrolling: touch;
+        -webkit-tap-highlight-color: transparent;
+      }
+      .pusha-active .pusha-panel__content {
+        overflow-y: auto;
+      }
+      .pusha-blocker {
+        opacity: 0;
+        visibility: hidden;
+        position: fixed;
+        top: 0;
+        left: 0;
+        z-index: 210;
+        width: 100%;
+        height: 100%;
+        background-color: rgba(0, 0, 0, 0.7);
+        -webkit-user-select: none;
+        -moz-user-select: none;
+        -ms-user-select: none;
+        user-select: none;
+        -webkit-tap-highlight-color: transparent;
+        -webkit-transition: visibility 0s linear 0.3s, opacity 0.3s ease,
+          -webkit-transform 0.3s ease;
+        transition: visibility 0s linear 0.3s, opacity 0.3s ease,
+          -webkit-transform 0.3s ease;
+        transition: visibility 0s linear 0.3s, transform 0.3s ease,
+          opacity 0.3s ease;
+        transition: visibility 0s linear 0.3s, transform 0.3s ease,
+          opacity 0.3s ease, -webkit-transform 0.3s ease;
+      }
+      .pusha-active .pusha-blocker {
+        opacity: 1;
+        visibility: visible;
+        -webkit-transition: opacity 0.3s ease, -webkit-transform 0.3s ease;
+        transition: opacity 0.3s ease, -webkit-transform 0.3s ease;
+        transition: transform 0.3s ease, opacity 0.3s ease;
+        transition: transform 0.3s ease, opacity 0.3s ease,
+          -webkit-transform 0.3s ease;
       }
     </style>
   </head>
@@ -34,8 +133,142 @@
       </div>
     </header>
     <div class="main"><div class="index">${content}$</div></div>
-    <script src="./static/pusha.min.js"></script>
     <script>
+      !(function (e, t) {
+        'function' == typeof define && define.amd
+          ? define([], t)
+          : 'object' == typeof module && module.exports
+          ? (module.exports = t())
+          : (e.Pusha = t())
+      })(this, function () {
+        'use strict'
+        var r = (function () {
+            var e = !1
+            try {
+              var t = Object.defineProperty({}, 'passive', {
+                get: function () {
+                  e = !0
+                },
+              })
+              window.addEventListener('testPassive', null, t),
+                window.removeEventListener('testPassive', null, t)
+            } catch (e) {}
+            return e
+          })(),
+          d = (function () {
+            var e = document.createElement('div')
+            ;(e.style.cssText =
+              'width: 99px; height: 99px; overflow: scroll; position: absolute; top: -9999px;'),
+              document.body.appendChild(e)
+            var t = e.offsetWidth - e.clientWidth
+            return document.body.removeChild(e), t
+          })()
+        return function (e, t) {
+          var n = 'string' == typeof e ? document.querySelector(e) : e
+          if (!n) return !1
+          var s,
+            o = document.documentElement,
+            i = document.getElementsByClassName('pusha-blocker')[0],
+            e = n.querySelector('[data-close]'),
+            l = n.querySelector('.pusha-panel__content'),
+            a = {
+              closeOnEsc: !0,
+              closeOnClick: !0,
+              disableOverscroll: !0,
+              disableBodyscroll: !1,
+              activeClass: 'pusha-active',
+              onOpen: function () {},
+              onClose: function () {},
+            }
+          for (s in t) a.hasOwnProperty(s) && (a[s] = t[s])
+          var c = {
+            isOpen: !1,
+            open: function (e) {
+              c.isOpen ||
+                ((c.isOpen = !0),
+                n.classList.add('pusha-panel--active'),
+                o.classList.add(a.activeClass),
+                document.body.scrollHeight > window.innerHeight &&
+                  ((o.style.paddingRight = d + 'px'),
+                  Array.prototype.forEach.call(
+                    document.getElementsByClassName('pusha-push'),
+                    function (e) {
+                      e.style.paddingRight = d + 'px'
+                    },
+                  )),
+                e &&
+                  ((c.activeElement = e.currentTarget),
+                  c.activeElement.setAttribute('aria-expanded', !0)),
+                n.setAttribute('aria-hidden', !1),
+                l.focus(),
+                a.onOpen(n))
+            },
+            close: function (e) {
+              c.isOpen &&
+                ((c.isOpen = !1),
+                n.classList.remove('pusha-panel--active'),
+                o.classList.remove(a.activeClass),
+                (o.style.paddingRight = ''),
+                Array.prototype.forEach.call(
+                  document.getElementsByClassName('pusha-push'),
+                  function (e) {
+                    e.style.paddingRight = ''
+                  },
+                ),
+                c.activeElement &&
+                  (c.activeElement.setAttribute('aria-expanded', !1),
+                  c.activeElement.focus()),
+                n.setAttribute('aria-hidden', !0),
+                a.onClose(n))
+            },
+            toggle: function (e) {
+              c.isOpen ? c.close(e) : c.open(e)
+            },
+            disableOverscroll: function (e) {
+              e.addEventListener('touchstart', function () {
+                0 === e.scrollTop
+                  ? (e.scrollTop = 1)
+                  : e.scrollTop + e.offsetHeight === e.scrollHeight &&
+                    (e.scrollTop = e.scrollTop - 1)
+              })
+            },
+            disableBodyscroll: function (t) {
+              document.body.addEventListener(
+                'touchmove',
+                function (e) {
+                  c.isOpen &&
+                    t.scrollHeight <= t.clientHeight &&
+                    e.preventDefault()
+                },
+                !!r && { passive: !1 },
+              )
+            },
+          }
+          return (
+            n.addEventListener('transitionend', function (e) {
+              'opacity' == e.propertyName &&
+                (c.isOpen
+                  ? o.classList.add('pusha-animated')
+                  : o.classList.remove('pusha-animated'))
+            }),
+            (window.CSS && CSS.supports('overscroll-behavior', 'contain')) ||
+              (a.disableOverscroll && c.disableOverscroll(l),
+              a.disableBodyscroll && c.disableBodyscroll(l)),
+            a.closeOnEsc &&
+              document.addEventListener('keydown', function (e) {
+                27 === e.keyCode && c.close(e)
+              }),
+            void 0 === i &&
+              (((i = document.createElement('div')).className =
+                'pusha-blocker'),
+              document.body.appendChild(i)),
+            a.closeOnClick && i.addEventListener('click', c.close),
+            e && e.addEventListener('click', c.close),
+            l.setAttribute('tabindex', '-1'),
+            (n.pusha = c)
+          )
+        }
+      })
       var menuLeft = new Pusha('.pusha-panel--left', {
         onOpen: function () {
           console.log('toc opened.')

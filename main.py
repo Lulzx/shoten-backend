@@ -153,8 +153,9 @@ def extract_data(soup) -> dict:
 
 
 class Worker:
-    def __init__(self, epub_path, output_dir):
+    def __init__(self, epub_path, output_dir, title):
         self.epub_path = epub_path
+        self.title = title
         script_dir = dirname(abspath(__file__))
         template_path = join(script_dir, "template.html")
         self.template = Path(template_path).read_text(encoding="utf-8")
@@ -282,14 +283,14 @@ class Worker:
         menu, full_content = self.gen_menu_content()
         self.template = self.template.replace("${menu}$", menu)
         self.template = self.template.replace(
-            "${title}$", self.epub_name_without_ext)
+            "${title}$", self.title)
         self.template = self.template.replace("${content}$", full_content)
         self.template = self.template.replace("${css}$", self.gen_r_css())
         Path(join(self.output_dir, self.epub_name_without_ext, "./index.html")
              ).write_text(self.template, encoding="utf-8")
 
 
-def replace_links(content):
+def replace_links(content, filename):
     soup = bs(content, "lxml")
     for src in soup.findAll('a'):
         try:
@@ -298,6 +299,9 @@ def replace_links(content):
             pass
     for img in soup.findAll('img'):
         img.attrs['loading'] = 'lazy'
+        if img["src"].startswith(".."):
+            img["src"] = img["src"].replace(
+                "..", f"static\{filename}")
     return soup
 
 
@@ -305,19 +309,20 @@ async def optimize_images(dir):
     Popen(["python", "-m", "optimize_images", f"{dir}"])
 
 
-async def processor(filename):
+async def processor(filename, title):
     output_dir = "./static/"
+    original = filename
     dir = f"{output_dir}{filename}/"
     if filename[0] != "." and filename[0] != "/":
         filename = "./" + filename
     filename = abspath(filename)
-    e = Worker(filename, output_dir)
+    e = Worker(filename, output_dir, title)
     e.gen()
     await optimize_images(dir)
     path = e.get_index_loc()
     with open(path, 'r') as markup:
         data = markup.read()
-        data = replace_links(data)
+        data = replace_links(data, original)
     return str(data)
 
 
@@ -438,10 +443,11 @@ async def epub(url: str):
                 filename = parse_url_args(url)["filename"]
             except:
                 filename = url.split("/")[-1]
+            title = filename.replace(".epub", '')
             filename = md5(filename.encode('utf-8')).hexdigest()
             with open(filename, 'wb') as f:
                 f.write(response.content)
-        return await processor(filename=filename)
+        return await processor(filename=filename, title=title)
     else:
         return "provide url to epub file."
 
