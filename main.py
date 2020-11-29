@@ -303,7 +303,8 @@ def replace_links(content, filename):
             img["src"] = img["src"].replace(
                 "..", f"static\{filename}")
         if "toc.ncx" in img["src"]:
-            img["src"] = img["src"].replace("toc.ncx/images", "/images")
+            img["src"] = img["src"].replace("toc.ncx/images", "images")
+            img["src"] = img["src"].replace("toc.ncx/assets", "assets")
     return soup
 
 
