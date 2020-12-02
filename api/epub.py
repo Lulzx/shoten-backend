@@ -119,8 +119,8 @@ class Worker:
         return sub_content.replace("<body", "<div").replace("</body>", "</div>")
 
     def wash_img_link(self, content_path, content) -> str:
-        directory = self.index_a_path
-        q = Path(self.opf_a_dir + "/images")
+        directory = self.root_a_path
+        q = Path(self.opf_a_dir)
         if q.exists():
             directory = q
         content = re.sub(
@@ -170,8 +170,6 @@ async def replace_links(content: str, filepath: str):
             pass
     for img in soup.findAll("img"):
         img.attrs["loading"] = "lazy"
-        if img.attrs["src"].startswith(".."):
-            img.attrs["src"] = img.attrs["src"].replace("..", f"{filepath}")
     return str(soup)
 
 
