@@ -17,7 +17,7 @@ import fastapi.middleware.cors
 import httpx
 from audiobooker.scrappers.librivox import Librivox
 from bs4 import BeautifulSoup as bs
-from fastapi import FastAPI
+from fastapi import FastAPI, BackgroundTasks
 from fastapi.responses import HTMLResponse
 from fastapi.staticfiles import StaticFiles
 from fastapi_cache import FastAPICache
@@ -116,8 +116,8 @@ async def search(query: str = "", search_type: str = "title", page: int = 0):
             [
                 td.a["href"]
                 if td.find("a")
-                and td.find("a").has_attr("title")
-                and td.find("a")["title"] != ""
+                   and td.find("a").has_attr("title")
+                   and td.find("a")["title"] != ""
                 else "".join(td.stripped_strings)
                 for td in row.find_all("td")
             ]
@@ -270,14 +270,13 @@ class Worker:
 
     @staticmethod
     def hash(s):
-        import base64
-        tag = base64.b64encode(s.encode('ascii'))
+        tag = b64encode(s.encode('ascii'))
         tag = tag.decode("ascii")
         return tag.rstrip('=')
 
     def gen_r_css(self):
-        with open(self.css_a_path, 'r') as file:
-            return f'<style>{file.read()}</style>'
+        css = Path(self.css_a_path).read_text(encoding="utf-8")
+        return f'<style>{css}</style>'
 
     def gen(self):
         menu, full_content = self.gen_menu_content()
@@ -301,32 +300,29 @@ def replace_links(content, filename):
         img.attrs['loading'] = 'lazy'
         if img["src"].startswith(".."):
             img["src"] = img["src"].replace(
-                "..", f"static\{filename}")
+                "..", f"static\\{filename}")
         if "toc.ncx" in img["src"]:
-            img["src"] = img["src"].replace("toc.ncx/images", "images")
-            img["src"] = img["src"].replace("toc.ncx/assets", "assets")
-    return soup
+            img["src"] = img["src"].replace("toc.ncx/", "")
+    return str(soup)
 
 
-async def optimize_images(dir):
-    Popen(["python", "-m", "optimize_images", f"{dir}"])
+async def optimize_images(filename: str) -> None:
+    directory = f"./static/{filename}/"
+    Popen(["python", "-m", "optimize_images", f"{directory}"])
 
 
 async def processor(filename, title):
     output_dir = "./static/"
-    original = filename
-    dir = f"{output_dir}{filename}/"
+    directory = f"{output_dir}{filename}/"
     if filename[0] != "." and filename[0] != "/":
         filename = "./" + filename
     filename = abspath(filename)
     e = Worker(filename, output_dir, title)
     e.gen()
-    await optimize_images(dir)
     path = e.get_index_loc()
-    with open(path, 'r', encoding="utf-8") as markup:
-        data = markup.read()
-        data = replace_links(data, original)
-    return str(data)
+    data = Path(path).read_text(encoding="utf-8")
+    data = replace_links(data, filename)
+    return data
 
 
 app = FastAPI()
@@ -396,8 +392,8 @@ async def book_info(code: str):
         try:
             response = await client.get(image)
             filepath = "./static/" + image.split('/')[-1]
-            with open(filepath, 'wb') as f:
-                f.write(response.content)
+            image_data = Path(filepath)
+            image_data.write_bytes(response.content)
             filepath = "https://lulzx.herokuapp.com/" + filepath[2:]
             await client.aclose()
         except:
@@ -439,18 +435,19 @@ async def audiobook_search(query: str):
 
 @app.get("/epub", response_class=HTMLResponse)
 @cache(expire=99)
-async def epub(url: str):
+async def epub(url: str, background: BackgroundTasks):
     if url.endswith(".epub"):
         async with httpx.AsyncClient() as client:
             response = await client.get(url)
             try:
-                filename = parse_url_args(url)["filename"]
+                filename: str = parse_url_args(url)["filename"]
             except:
-                filename = url.split("/")[-1]
+                filename: str = url.split("/")[-1]
             title = filename.replace(".epub", '')
             filename = md5(filename.encode('utf-8')).hexdigest()
-            with open(filename, 'wb') as f:
-                f.write(response.content)
+            background.add_task(optimize_images, filename=filename)
+            epub_data = Path(filename)
+            epub_data.write_bytes(response.content)
         return await processor(filename=filename, title=title)
     else:
         return "provide url to epub file."
