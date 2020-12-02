@@ -128,9 +128,9 @@ dmypy.json
 # Pyre type checker
 .pyre/
 
-static/*
+api/static/*
 
 *.epub
 .idea
 
-!static/.gitkeep
+!api/static/.gitkeep

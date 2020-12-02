@@ -175,7 +175,7 @@ async def replace_links(content: str, filename: str):
 
 
 async def processor(title: str, filename: str):
-    output_dir = "../static/"
+    output_dir = "./static/"
     directory = f"{output_dir}{filename}/"
     if filename[0] != "." and filename[0] != "/":
         filename = "./" + filename
