@@ -78,7 +78,7 @@ app.add_middleware(
     gzip_fallback=True,
 )
 
-app.mount("/static", StaticFiles(directory="./static"), name="static")
+app.mount("/static", StaticFiles(directory="static"), name="static")
 
 
 @cache()

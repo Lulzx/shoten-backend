@@ -125,7 +125,7 @@ class Worker:
             directory = q
         content = re.sub(
             '(?<=src=")(.*)(?=")',
-            lambda match: os.path.join(directory, match.group(1)),
+            lambda match: os.path.relpath(join(directory, match.group(1))),
             content,
         )
         return content
