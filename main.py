@@ -433,22 +433,20 @@ async def audiobook_search(query: str):
 
 
 @app.get("/epub", response_class=HTMLResponse)
-@cache(expire=1)
+@cache(expire=99)
 async def epub(url: str, background: BackgroundTasks):
     if url.endswith(".epub"):
-        # async with httpx.AsyncClient() as client:
-        #     response = await client.get(url)
-        #     try:
-        #         filename: str = parse_url_args(url)["filename"]
-        #     except:
-        #         filename: str = url.split("/")[-1]
-        if True:
-            filename = "./arch.epub"
+        async with httpx.AsyncClient() as client:
+            response = await client.get(url)
+            try:
+                filename: str = parse_url_args(url)["filename"]
+            except:
+                filename: str = url.split("/")[-1]
             title = filename.replace(".epub", "")
             filename = md5(filename.encode("utf-8")).hexdigest()
             background.add_task(optimize_images, filename=filename)
-            # epub_data = Path(filename)
-            # epub_data.write_bytes(response.content)
+            epub_data = Path(filename)
+            epub_data.write_bytes(response.content)
         return await processor(filename=filename, title=title)
     else:
         return "provide url to epub file."
