@@ -3,9 +3,9 @@
 import os
 import re
 import zipfile
-from hashlib import md5
 from base64 import b64encode
 from dataclasses import asdict
+from hashlib import md5
 from html.parser import HTMLParser
 from os.path import dirname, basename, join, splitext, abspath
 from pathlib import Path
@@ -16,6 +16,7 @@ from urllib.parse import urlencode, parse_qs, urlparse
 import fastapi.middleware.cors
 import httpx
 from audiobooker.scrappers.librivox import Librivox
+from brotli_asgi import BrotliMiddleware
 from bs4 import BeautifulSoup as bs
 from fastapi import FastAPI, BackgroundTasks
 from fastapi.responses import HTMLResponse
@@ -23,7 +24,6 @@ from fastapi.staticfiles import StaticFiles
 from fastapi_cache import FastAPICache
 from fastapi_cache.backends.inmemory import InMemoryBackend
 from fastapi_cache.decorator import cache
-from brotli_asgi import BrotliMiddleware
 from lxml import etree
 from pydantic import AnyUrl, BaseModel
 from pydantic.dataclasses import dataclass
@@ -116,8 +116,8 @@ async def search(query: str = "", search_type: str = "title", page: int = 0):
             [
                 td.a["href"]
                 if td.find("a")
-                   and td.find("a").has_attr("title")
-                   and td.find("a")["title"] != ""
+                and td.find("a").has_attr("title")
+                and td.find("a")["title"] != ""
                 else "".join(td.stripped_strings)
                 for td in row.find_all("td")
             ]
@@ -146,8 +146,7 @@ def extract_data(soup) -> dict:
     for key, value in prefix.items():
         tag = "div" if value == "Description" else "p"
         raw_data = soup.select_one(f"{tag}:contains({value})")
-        data[key] = raw_data.get_text().split(
-            ":", 1)[-1].strip() if raw_data else ""
+        data[key] = raw_data.get_text().split(":", 1)[-1].strip() if raw_data else ""
     data.update(year=data["year"][-4:])
     return data
 
@@ -176,13 +175,13 @@ class Worker:
     @staticmethod
     def get_xml_root(path):
         contents = Path(path).read_text(encoding="utf-8")
-        contents = re.sub(' xmlns="[^"]+"', '', contents, count=1)
+        contents = re.sub(' xmlns="[^"]+"', "", contents, count=1)
         contents = contents.encode("utf-8")
         root_path = etree.fromstring(contents)
         return root_path
 
     def get_opf_r_root_path(self):
-        meta_a_path = (join(self.root_a_path, "META-INF/container.xml"))
+        meta_a_path = join(self.root_a_path, "META-INF/container.xml")
         root_path = self.get_xml_root(meta_a_path)
         for item in root_path.findall(".//rootfiles/"):
             return item.attrib["full-path"]
@@ -212,20 +211,21 @@ class Worker:
             src = link.attrib["src"]
             unified_src = src
             no_hash_name = src
-            if src.find('#') != -1:
-                no_hash_name = src[:src.find("#")]
-            if '#' not in src:
+            if src.find("#") != -1:
+                no_hash_name = src[: src.find("#")]
+            if "#" not in src:
                 unified_src = "#" + self.hash(src)
-                anchor = f"<div id=\"{self.hash(src)}\"></div>"
+                anchor = f'<div id="{self.hash(src)}"></div>'
                 contents.append(anchor)
             else:
                 unified_src = re.sub(r".+html", "", src)
-            menus.append(f"<li><a href=\"{unified_src}\">{name}</a></li>")
+            menus.append(f'<li><a href="{unified_src}">{name}</a></li>')
             if no_hash_name in self.already_gen_html:
                 continue
             self.already_gen_html.add(no_hash_name)
             washed_content = self.gen_content(
-                join(dirname(self.ncx_a_path), no_hash_name))
+                join(dirname(self.ncx_a_path), no_hash_name)
+            )
             contents.append(washed_content)
             subs = cc.findall("./navPoint")
             if len(subs) > 0:
@@ -238,71 +238,70 @@ class Worker:
         menus = []
         contents = []
         root_path = self.get_xml_root(self.ncx_a_path)
-        menus.append("<ul class=\"nav nav-sidebar \">")
+        menus.append('<ul class="nav nav-sidebar ">')
         for c in root_path.findall("./navMap/navPoint"):
             self._gen_menu_content(c, menus, contents, 0)
         menus.append("</ul>")
         return "\n".join(menus), "".join(contents)
 
     def unzip(self):
-        with zipfile.ZipFile(self.epub_path, 'r') as zip_ref:
+        with zipfile.ZipFile(self.epub_path, "r") as zip_ref:
             zip_ref.extractall(self.root_a_path)
 
     def gen_content(self, path):
-        raw_text_content = Path(path).read_bytes()
-        raw_content_dom = etree.HTML(raw_text_content)
-        content = etree.tostring(raw_content_dom.xpath(
-            "//body")[0], method='html').decode("utf-8")
+        raw_text_content = Path(path).read_text(encoding="utf-8")
+        soup = bs(raw_text_content, "lxml")
+        content = str(soup.find("body"))
         washed_content = self.wash_body(content)
         washed_content = self.wash_img_link(path, washed_content)
         return washed_content
 
     @staticmethod
     def wash_body(sub_content):
-        tmp = sub_content.replace("<body", "<div")
-        tmp = tmp.replace("</body>", "</div>")
-        return tmp
+        return sub_content.replace("<body", "<div").replace("</body>", "</div>")
 
     def wash_img_link(self, content_path, content):
-        content = re.sub("(?<=src=\")(.*)(?=\")", lambda match: os.path.relpath(
-            join(self.ncx_a_path, match.group(1))), content)
+        content = re.sub(
+            '(?<=src=")(.*)(?=")',
+            lambda match: os.path.relpath(join(self.ncx_a_path, match.group(1))),
+            content,
+        )
         return content
 
     @staticmethod
     def hash(s):
-        tag = b64encode(s.encode('ascii'))
+        tag = b64encode(s.encode("ascii"))
         tag = tag.decode("ascii")
-        return tag.rstrip('=')
+        return tag.rstrip("=")
 
     def gen_r_css(self):
         css = Path(self.css_a_path).read_text(encoding="utf-8")
-        return f'<style>{css}</style>'
+        return f"<style>{css}</style>"
 
     def gen(self):
         menu, full_content = self.gen_menu_content()
         self.template = self.template.replace("${menu}$", menu)
-        self.template = self.template.replace(
-            "${title}$", self.title)
+        self.template = self.template.replace("${title}$", self.title)
         self.template = self.template.replace("${content}$", full_content)
         self.template = self.template.replace("${css}$", self.gen_r_css())
-        Path(join(self.output_dir, self.epub_name_without_ext, "./index.html")
-             ).write_text(self.template, encoding="utf-8")
+        Path(
+            join(self.output_dir, self.epub_name_without_ext, "./index.html")
+        ).write_text(self.template, encoding="utf-8")
 
 
 def replace_links(content, filename):
     soup = bs(content, "lxml")
-    for src in soup.findAll('a'):
+    for src in soup.findAll("a"):
         try:
-            src["href"] = src["href"][src["href"].find("#"):]
+            src["href"] = src["href"][src["href"].find("#") :]
         except KeyError:
             pass
-    for img in soup.findAll('img'):
-        img.attrs['loading'] = 'lazy'
+    for img in soup.findAll("img"):
+        img.attrs["loading"] = "lazy"
         if img["src"].startswith(".."):
-            img["src"] = img["src"].replace(
-                "..", f"static\\{filename}")
+            img["src"] = img["src"].replace("..", f"static\\{filename}")
         if "toc.ncx" in img["src"]:
-            img["src"] = img["src"].replace("toc.ncx/", "")
+            img["src"] = img["src"].replace("toc.ncx", "")
     return str(soup)
 
 
@@ -342,7 +341,7 @@ app.add_middleware(
     lgwin=22,
     lgblock=0,
     minimum_size=400,
-    gzip_fallback=True
+    gzip_fallback=True,
 )
 
 app.mount("/static", StaticFiles(directory="static"), name="static")
@@ -391,7 +390,7 @@ async def book_info(code: str):
     else:
         try:
             response = await client.get(image)
-            filepath = "./static/" + image.split('/')[-1]
+            filepath = "./static/" + image.split("/")[-1]
             image_data = Path(filepath)
             image_data.write_bytes(response.content)
             filepath = "https://lulzx.herokuapp.com/" + filepath[2:]
@@ -434,20 +433,22 @@ async def audiobook_search(query: str):
 
 
 @app.get("/epub", response_class=HTMLResponse)
-@cache(expire=99)
+@cache(expire=1)
 async def epub(url: str, background: BackgroundTasks):
     if url.endswith(".epub"):
-        async with httpx.AsyncClient() as client:
-            response = await client.get(url)
-            try:
-                filename: str = parse_url_args(url)["filename"]
-            except:
-                filename: str = url.split("/")[-1]
-            title = filename.replace(".epub", '')
-            filename = md5(filename.encode('utf-8')).hexdigest()
+        # async with httpx.AsyncClient() as client:
+        #     response = await client.get(url)
+        #     try:
+        #         filename: str = parse_url_args(url)["filename"]
+        #     except:
+        #         filename: str = url.split("/")[-1]
+        if True:
+            filename = "./arch.epub"
+            title = filename.replace(".epub", "")
+            filename = md5(filename.encode("utf-8")).hexdigest()
             background.add_task(optimize_images, filename=filename)
-            epub_data = Path(filename)
-            epub_data.write_bytes(response.content)
+            # epub_data = Path(filename)
+            # epub_data.write_bytes(response.content)
         return await processor(filename=filename, title=title)
     else:
         return "provide url to epub file."
