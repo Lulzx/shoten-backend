@@ -1,12 +1,11 @@
 # -*- coding: utf-8 -*-
-
 import os
 import re
 import zipfile
 from base64 import b64encode
 from os.path import dirname, basename, join, splitext, abspath
-from subprocess import Popen
 from pathlib import Path
+from subprocess import Popen
 from urllib.parse import parse_qs, urlparse
 
 from bs4 import BeautifulSoup as bs
@@ -120,9 +119,13 @@ class Worker:
         return sub_content.replace("<body", "<div").replace("</body>", "</div>")
 
     def wash_img_link(self, content_path, content) -> str:
+        directory = self.index_a_path
+        q = Path(self.opf_a_dir + "/images")
+        if q.exists():
+            directory = q
         content = re.sub(
             '(?<=src=")(.*)(?=")',
-            lambda match: os.path.relpath(join(self.ncx_a_path, match.group(1))),
+            lambda match: os.path.join(directory, match.group(1)),
             content,
         )
         return content
@@ -158,7 +161,7 @@ async def optimize_images(filename: str):
     Popen(["python", "-m", "optimize_images", f"{directory}"])
 
 
-async def replace_links(content: str, filename: str):
+async def replace_links(content: str, filepath: str):
     soup = bs(content, "lxml")
     for src in soup.findAll("a"):
         try:
@@ -167,16 +170,14 @@ async def replace_links(content: str, filename: str):
             pass
     for img in soup.findAll("img"):
         img.attrs["loading"] = "lazy"
-        if img["src"].startswith(".."):
-            img["src"] = img["src"].replace("..", f"static\\{filename}")
-        if "toc.ncx" in img["src"]:
-            img["src"] = img["src"].replace("toc.ncx", "")
+        if img.attrs["src"].startswith(".."):
+            img.attrs["src"] = img.attrs["src"].replace("..", f"{filepath}")
     return str(soup)
 
 
 async def processor(title: str, filename: str):
     output_dir = "./static/"
-    directory = f"{output_dir}{filename}/"
+    original = output_dir + filename
     if filename[0] != "." and filename[0] != "/":
         filename = "./" + filename
     filename = abspath(filename)
@@ -184,5 +185,5 @@ async def processor(title: str, filename: str):
     e.gen()
     path = e.get_index_loc()
     data = Path(path).read_text(encoding="utf-8")
-    data = await replace_links(data, filename)
+    data = await replace_links(data, original)
     return data

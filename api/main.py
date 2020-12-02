@@ -134,10 +134,11 @@ async def epub(url: str, background: BackgroundTasks):
                 filename = url.split("/")[-1]
             title = filename.replace(".epub", "")
             filename = md5(filename.encode("utf-8")).hexdigest()
-            background.add_task(optimize_images, filename=filename)
             epub_data = Path(filename)
             epub_data.write_bytes(response.content)
-        return await processor(title=title, filename=filename)
+            result = await processor(title=title, filename=filename)
+            background.add_task(optimize_images, filename=filename)
+        return result
     else:
         return "provide url to epub file."
 
