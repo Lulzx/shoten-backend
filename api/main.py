@@ -1,14 +1,15 @@
 # -*- coding: utf-8 -*-
 
+from hashlib import md5
+from pathlib import Path
 from typing import List
 
 import fastapi.middleware.cors
 import httpx
-from hashlib import md5
-from pathlib import Path
 from audiobooker.scrappers.librivox import Librivox
 from brotli_asgi import BrotliMiddleware
 from fastapi import FastAPI, BackgroundTasks
+from fastapi.middleware.httpsredirect import HTTPSRedirectMiddleware
 from fastapi.responses import HTMLResponse
 from fastapi.staticfiles import StaticFiles
 from fastapi_cache import FastAPICache
@@ -17,8 +18,8 @@ from fastapi_cache.decorator import cache
 from pydantic import AnyUrl, BaseModel
 from pydantic.dataclasses import dataclass
 
-from api.epub import processor, parse_url_args, optimize_images
 from api.activity import check_title
+from api.epub import processor, parse_url_args, optimize_images
 from api.scraper import search, extract_data
 
 
@@ -67,6 +68,8 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+app.add_middleware(HTTPSRedirectMiddleware)
 
 app.add_middleware(
     BrotliMiddleware,
