@@ -95,13 +95,13 @@ async def root():
     return {"message": "Hello, World!"}
 
 
-@app.get("/query/{search_type}/{query}/{page}", response_model=SearchResult)
+@app.get("/query/{query}/{page}", response_model=SearchResult)
 @cache(expire=99)
-async def book_search(search_type: str, query: str, page: int):
-    result = await search(query, search_type, page)
-    if not result["results"] and search_type == "title":
+async def book_search(query: str, page: int):
+    result = await search(query, page)
+    if not result["results"]:
         query = await check_title(query)
-        result = await search(query, search_type, page)
+        result = await search(query, page)
     return result
 
 

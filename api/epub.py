@@ -180,7 +180,7 @@ async def processor(title: str, filename: str):
     filename = abspath(filename)
     e = Worker(filename, output_dir, title)
     e.gen()
-    path = e.get_index_loc()
+    path: str = e.get_index_loc()
     data = Path(path).read_text(encoding="utf-8")
     data = await replace_links(data, original)
     return data

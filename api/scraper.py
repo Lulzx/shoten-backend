@@ -35,7 +35,8 @@ async def sanitize(row: list[str]):
     return row
 
 
-async def search(query: str = "", search_type: str = "title", page: int = 0) -> dict:
+async def search(query: str = "", page: int = 0) -> dict:
+    search_type: str = "def"
     params = LibGen(req=query, column=search_type, page=page)
     query_string = urlencode(asdict(params), doseq=True)
     search_url = f"http://gen.lib.rus.ec/search.php?{query_string}"
