@@ -99,7 +99,7 @@ async def extract_data(code: str) -> dict:
         except:
             filepath = "NO_IMAGE"
     try:
-        direct_url = soup.select_one("a[href*=cloudflare]")["href"]
+        direct_url = soup.select_one("a[href*=ipfs.io]")["href"]
     except TypeError:
         direct_url = soup.select_one("a[href*=main]")["href"]
     except:
